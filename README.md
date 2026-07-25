@@ -10,6 +10,7 @@ satisfy the GNU Lesser General Public License.
 | Upstream | <https://ffmpeg.org> — version `5.1.6`, git tag `n5.1.6`, commit `6338d19eb349e23a2004eb6cdd863bdef454572d` |
 | Tarball | `ffmpeg-5.1.6.tar.xz`, sha256 `f4fa066278f7a47feab316fef905f4db0d5e9b589451949740f83972b30901bd` |
 | Modified | Yes — `libavformat/flv.h`, `libavformat/flvdec.c`, `libavformat/flvenc.c`; see [`patches/5.1/hevc-flv.patch`](patches/5.1/hevc-flv.patch) |
+| Patch origin | Adapted for the 5.1 API from the community patch by [kn007](https://github.com/kn007/patch) |
 | License | GNU LGPL v2.1 or later; built with `--enable-version3`. Texts: [`COPYING.LGPLv2.1`](COPYING.LGPLv2.1), [`COPYING.LGPLv3`](COPYING.LGPLv3) |
 
 The upstream tarball, its upstream GPG signature, and the patch are attached to the
