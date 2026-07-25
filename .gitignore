@@ -1,0 +1,4 @@
+# 上游原件与平铺补丁只作为 release 附件分发，不入版本库（保持仓库轻量）
+/ffmpeg-*.tar.xz
+/ffmpeg-*.tar.xz.asc
+/hevc-flv.patch
