@@ -1,7 +1,9 @@
 # FFmpeg corresponding source (LGPL)
 
-Corresponding source for the FFmpeg libraries distributed with our applications, published to
-satisfy the GNU Lesser General Public License.
+Complete source for a patched build of FFmpeg, published as the corresponding source required by
+the GNU Lesser General Public License. Each entry pins the exact upstream revision, the patch
+applied on top of it, and the license-relevant build configuration, so the source of any
+prebuilt binary can be reproduced and verified.
 
 ## FFmpeg 5.1.6
 
@@ -40,8 +42,8 @@ artifacts; everything else is standard upstream `configure`.
 
 ## Scope
 
-This repository covers the FFmpeg versions we distribute. Additional versions and patch changes
-are added here before the corresponding build is released.
+Only versions for which prebuilt binaries are distributed are listed here. New versions and
+patch changes are added before the corresponding build ships.
 
 ## Trademark
 
