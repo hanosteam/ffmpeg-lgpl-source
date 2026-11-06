@@ -1,0 +1,78 @@
+diff --git a/libavformat/av1dec.c b/libavformat/av1dec.c
+index 350f536..4be79f6 100644
+--- a/libavformat/av1dec.c
++++ b/libavformat/av1dec.c
+@@ -342,10 +342,22 @@ static int obu_probe(const AVProbeData *p)
+     int seq = 0;
+     int ret, type, cnt;
+ 
+-    // Check that the first OBU is a Temporal Delimiter.
++    // The first OBU is normally a Temporal Delimiter, but some muxers omit it
++    // (e.g. the AV1-in-MPEG-TS carriage produced by several capture tools) and
++    // start the stream with a Sequence Header instead. Accept both; a Frame or
++    // Frame Header OBU is still required below, which keeps the probe strict.
+     cnt = read_obu_with_size(p->buf, p->buf_size, &obu_size, &type);
+-    if (cnt < 0 || type != AV1_OBU_TEMPORAL_DELIMITER || obu_size != 0)
++    if (cnt < 0)
++        return 0;
++    if (type == AV1_OBU_TEMPORAL_DELIMITER) {
++        if (obu_size != 0)
++            return 0;
++    } else if (type == AV1_OBU_SEQUENCE_HEADER) {
++        // A leading Sequence Header also starts a temporal unit.
++        seq = 1;
++    } else {
+         return 0;
++    }
+ 
+     while (1) {
+         ret = read_obu_with_size(p->buf + cnt, p->buf_size - cnt, &obu_size, &type);
+diff --git a/libavformat/demux.c b/libavformat/demux.c
+index ab433f4..3aeb579 100644
+--- a/libavformat/demux.c
++++ b/libavformat/demux.c
+@@ -107,6 +107,7 @@ static int set_codec_from_probe_data(AVFormatContext *s, AVStream *st,
+         { "aac",        AV_CODEC_ID_AAC,          AVMEDIA_TYPE_AUDIO    },
+         { "ac3",        AV_CODEC_ID_AC3,          AVMEDIA_TYPE_AUDIO    },
+         { "aptx",       AV_CODEC_ID_APTX,         AVMEDIA_TYPE_AUDIO    },
++        { "av1",        AV_CODEC_ID_AV1,          AVMEDIA_TYPE_VIDEO    },
+         { "dts",        AV_CODEC_ID_DTS,          AVMEDIA_TYPE_AUDIO    },
+         { "dvbsub",     AV_CODEC_ID_DVB_SUBTITLE, AVMEDIA_TYPE_SUBTITLE },
+         { "dvbtxt",     AV_CODEC_ID_DVB_TELETEXT, AVMEDIA_TYPE_SUBTITLE },
+@@ -118,6 +119,7 @@ static int set_codec_from_probe_data(AVFormatContext *s, AVStream *st,
+         { "mjpeg_2000", AV_CODEC_ID_JPEG2000,     AVMEDIA_TYPE_VIDEO    },
+         { "mp3",        AV_CODEC_ID_MP3,          AVMEDIA_TYPE_AUDIO    },
+         { "mpegvideo",  AV_CODEC_ID_MPEG2VIDEO,   AVMEDIA_TYPE_VIDEO    },
++        { "obu",        AV_CODEC_ID_AV1,          AVMEDIA_TYPE_VIDEO    },
+         { "truehd",     AV_CODEC_ID_TRUEHD,       AVMEDIA_TYPE_AUDIO    },
+         { 0 }
+     };
+diff --git a/libavformat/mpegts.c b/libavformat/mpegts.c
+index edbf126..6baac6c 100644
+--- a/libavformat/mpegts.c
++++ b/libavformat/mpegts.c
+@@ -864,6 +864,7 @@ static const StreamType REGD_types[] = {
+     { MKTAG('D', 'T', 'S', '3'), AVMEDIA_TYPE_AUDIO, AV_CODEC_ID_DTS   },
+     { MKTAG('E', 'A', 'C', '3'), AVMEDIA_TYPE_AUDIO, AV_CODEC_ID_EAC3  },
+     { MKTAG('H', 'E', 'V', 'C'), AVMEDIA_TYPE_VIDEO, AV_CODEC_ID_HEVC  },
++    { MKTAG('A', 'V', '0', '1'), AVMEDIA_TYPE_VIDEO, AV_CODEC_ID_AV1   },
+     { MKTAG('K', 'L', 'V', 'A'), AVMEDIA_TYPE_DATA,  AV_CODEC_ID_SMPTE_KLV },
+     { MKTAG('I', 'D', '3', ' '), AVMEDIA_TYPE_DATA,  AV_CODEC_ID_TIMED_ID3 },
+     { MKTAG('V', 'C', '-', '1'), AVMEDIA_TYPE_VIDEO, AV_CODEC_ID_VC1   },
+diff --git a/libavformat/mpegtsenc.c b/libavformat/mpegtsenc.c
+index c964d58..cc79913 100644
+--- a/libavformat/mpegtsenc.c
++++ b/libavformat/mpegtsenc.c
+@@ -795,6 +795,12 @@ static int mpegts_write_pmt(AVFormatContext *s, MpegTSService *service)
+             } else if (stream_type == STREAM_TYPE_VIDEO_CAVS || stream_type == STREAM_TYPE_VIDEO_AVS2 ||
+                        stream_type == STREAM_TYPE_VIDEO_AVS3) {
+                 put_registration_descriptor(&q, MKTAG('A', 'V', 'S', 'V'));
++            } else if (codec_id == AV_CODEC_ID_AV1) {
++                /* AV1 in MPEG-TS is carried as private data (stream_type 0x06)
++                 * with a registration descriptor "AV01" (see the AV1 carriage
++                 * spec). Emitting it makes the output self-describing instead
++                 * of relying on the demuxer probing the bitstream. */
++                put_registration_descriptor(&q, MKTAG('A', 'V', '0', '1'));
+             }
+             break;
+         case AVMEDIA_TYPE_DATA:

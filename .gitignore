@@ -2,3 +2,4 @@
 /ffmpeg-*.tar.xz
 /ffmpeg-*.tar.xz.asc
 /hevc-flv.patch
+/av1-mpegts.patch
